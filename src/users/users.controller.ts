@@ -12,14 +12,14 @@ export class UsersController {
         return result;
     }
 
-    @Post()
+    @Post('register')
     async registerUser(
         @Body('firstName') firstName: string,
         @Body('lastName') lastName: string,
         @Body('password') password: string,
         @Body('age') age: number,
         @Body('email') email: string
-    ) {
+    ) : Promise<User | string> {
         const registered = await this.usersService.registerUser(
             firstName,
             lastName,
@@ -33,13 +33,19 @@ export class UsersController {
 
     @Post('login')
     async login(
-        @Body('firstName') firstName: string,
-        @Body('lastName') lastName: string,
-        @Body('password') password: string,
-        @Body('age') age: number,
         @Body('email') email: string,
-    ): Promise<boolean>{
-        const val = await this.usersService.loginUser(firstName, lastName, password, age, email);
+        @Body('password') password: string        
+    ): Promise<boolean | string>{
+        const val = await this.usersService.loginUser(password, email);
         return val;
+    }
+
+    @Post('token')
+    token(
+        @Body('token') token : string
+    ): string {
+        const response = this.usersService.auth(token);
+
+        return response;
     }
 }

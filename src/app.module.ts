@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './users/users.module'
 import { MongooseModule } from '@nestjs/mongoose'
+import { ConfigModule } from '@nestjs/config';
+
+import { UsersModule } from './users/users.module'
+import { BlogsModule } from './blogs/blogs.module'
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     UsersModule, 
-    MongooseModule.forRoot('mongodb+srv://Andrei:YOGQS605AsEMw7aK@cluster0.fjb2k.mongodb.net/nestjs-demo?retryWrites=true&w=majority'
+    BlogsModule,
+    MongooseModule.forRoot(process.env.CONNECT_STRING_TO_MONGO, { useNewUrlParser: true }
     )],
   controllers: [AppController],
   providers: [AppService],
