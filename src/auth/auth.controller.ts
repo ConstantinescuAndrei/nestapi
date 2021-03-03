@@ -6,7 +6,7 @@ import { User } from './user.model';
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
-        ) {}
+    ) { }
 
     @Get()
     async getUsers() {
@@ -15,9 +15,9 @@ export class AuthController {
     }
 
     @Post('token')
-    isValid(
+    async isValid(
         @Body('token') token: string
-    ) : string {
+    ) {
         const result = this.authService.checkToken(token);
 
         return result;
@@ -27,13 +27,14 @@ export class AuthController {
     async registerUser(
         @Body('firstName') firstName: string,
         @Body('lastName') lastName: string,
+        @Body('username') username: string,
         @Body('password') password: string,
-        @Body('age') age: number,
         @Body('email') email: string
-    ) : Promise<string> {    
+    ): Promise<Object> {
         const userToken = await this.authService.registerUser(
             firstName,
             lastName,
+            username,
             password,
             email,
         );
@@ -41,29 +42,30 @@ export class AuthController {
         return userToken;
     }
 
-    @Post('login')
-    async login(
-        @Body('email') email: string,
-        @Body('password') password: string        
-    ): Promise<Object | string>{
-        const val = await this.authService.loginUser(password, email);
+    @Post('loginByUsername')
+    async loginByUsername(
+        @Body('username') username: string,
+        @Body('password') password: string
+    ): Promise<Object | string> {
+        const val = await this.authService.loginByUsername(username, password);
 
         return val;
     }
 
-    @Post('token')
-    token(
-        @Body('token') token : string
-    ): string {
-        const response = this.authService.auth(token);
+    @Post('loginByEmail')
+    async loginByEmail(
+        @Body('email') email: string,
+        @Body('password') password: string
+    ) {
+        const val = await this.authService.loginByEmail(email, password);
 
-        return response;
+        return val;
     }
 
     @Post('logout')
-    async logou(
+    logout(
         @Body('email') email: string
-    ) : Promise<boolean> {
+    ): string {
         const response = this.authService.logout(email);
 
         return response;

@@ -7,24 +7,22 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserSchema } from './user.model';
 import { RefreshTokenSchema } from './refreshToken.model'
+import { AuthTokenService } from './JwtVerification/auth.token.service'
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
         JwtModule.register({
-            secretOrPrivateKey: process.env.SECRET_TOKEN,   
-            signOptions: {
-                expiresIn: '15s',
-            }
+            secret: process.env.SECRET_TOKEN
         }),
         MongooseModule.forFeature([
             { name: 'Users', schema: UserSchema },
             { name: 'RefreshTokens', schema: RefreshTokenSchema}
-        ]),
+        ])   
     ],
     controllers: [AuthController],
-    providers: [AuthService],
-    exports: [AuthService],
+    providers: [AuthService, AuthTokenService],
+    exports: [AuthTokenService],
 })
 
 export class AuthModule{}

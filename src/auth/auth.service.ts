@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import { User, } from './user.model';
 import { RefreshToken } from './refreshToken.model';
+import { AuthTokenService } from './JwtVerification/auth.token.service';
 
 @Injectable()
 export class AuthService {
@@ -13,7 +14,8 @@ export class AuthService {
         @InjectModel('Users') private readonly userModel: Model<User>,
         @InjectModel('RefreshTokens') private readonly refreshTokenModel: Model<RefreshToken>,
         private readonly jwtService: JwtService,
-    ){}
+        private readonly authTokenService: AuthTokenService
+    ) { }
 
     // RETURN ALL USERS
     async getUsers() {
@@ -29,109 +31,123 @@ export class AuthService {
 
     // REGISTER USER
     async registerUser(
-        firstName: string, 
+        firstName: string,
         lastName: string,
-        password: string, 
-        email: string): Promise<string> {
+        username: string,
+        password: string,
+        email: string): Promise<Object> {
         const hashPassword = await bcrypt.hash(password, 10);
         const newUser = new this.userModel({
             firstName,
             lastName,
+            username,
             password: hashPassword,
             email,
         });
-        
-        const emailExist = await this.userModel.findOne({email}).exec();
 
-        if(emailExist) {
+        const emailExist = await this.userModel.findOne({ email }).exec();
+
+        if (emailExist) {
             console.log("hello");
 
-            return "An account with this email is already register";
+            const result: Object = {
+                registered: false,
+                reason: "An account with this email is already register"
+            };
+            return result;
         }
 
-        const { token, refreshToken } = this.createToken(email);
-        const newRefreshToken = new this.refreshTokenModel({
-            email,
-            refreshToken
-        })
-        await newRefreshToken.save();
+        const token = this.authTokenService.createToken(email);
         await newUser.save();
-        return token;
-        
+
+        const result: Object = {
+            token,
+            registered: true,
+        }
+
+        return result;
     }
 
     // LOGIN USER
-    async loginUser(
-        password: string,
-        email: string): Promise<Object | string> {                
-        const user = await this.userModel.findOne({email}).exec(); 
+    async loginByUsername(
+        username: string,
+        password: string
+    ): Promise<Object | string> {
+        const user = await this.userModel.findOne({ username }).exec();
+
+        if (user) {
+            const passwordMatch = await bcrypt.compare(password, user['password']);
+
+            if (passwordMatch) {
+                const token = await this.authTokenService.createToken(username);
+
+                const resultObject: Object = {
+                    token,
+                    user,
+                    connected: true
+                }
+                return resultObject;
+            }
+        }
+        const resultObject: Object = {
+            connected: false,
+            reason: "Username or password invalid!"
+        }
+        return resultObject;
+    }
+
+    async loginByEmail (
+        email: string,
+        password: string
+    ): Promise<Object | string> {
+        const user = await this.userModel.findOne({email}).exec();
 
         if(user) {
             const passwordMatch = await bcrypt.compare(password, user['password']);
 
             if(passwordMatch) {
-                console.log(user['_id']);
-                const token = this.createToken(user['_id']);
-                const refreshToken = this.jwtService.sign({userId: user['_id']}, {
-                    secret: process.env.REFRESH_SECRET_TOKEN,
-                })
-                console.log(token);
-                console.log(refreshToken);
-                
-                return token;
+                const token = await this.authTokenService.createToken(email);
+
+                const resultObject: Object = {
+                    token,
+                    user,
+                    connected: true
+                }
+                return resultObject;
             }
-        }  
-        return "Failed to login"
-    }    
+        }
+        const resultObject: Object = {
+            reason: "Email or password invalid!",
+            connected: false
+        }
 
-    async logout(
+        return resultObject;
+    }
+
+    logout(
         email: string,
-    ) : Promise<boolean> {
-        const response = await this.refreshTokenModel.deleteOne({ email }).exec();
-        console.log(response);
+    ): string {
+        // const response = await this.refreshTokenModel.deleteOne({ email }).exec();
+        // console.log(response);
 
-        if(response) {
-            return true;
-        }
-        
-        return false;
+        // if(response) {
+        //     return true;
+        // }
+
+        // return false;
+
+        return "Logout";
     }
 
-    checkToken(token: string) : string {
-        const result = this.auth(token);
+    async checkToken(token: string) {
+        const result = this.authTokenService.tokenValidation(token);
+        console.log(result);
 
         return result;
     }
 
-    auth(token : string) : string {
-        if(!token) {
-            return "invalid token";
-        }
-    
-        try {
-            const verify = this.jwtService.verify(token);
-    
-            console.log(typeof verify);
-            return verify;
-        }
-        catch (err) {
-            console.log(typeof err)
-            return err;
-        }
-    }
 
-    private createToken(email: string) {
-        const token = this.jwtService.sign({email: email});
-        const refreshToken = this.jwtService.sign(
-            {email: email},
-            {secret: process.env.REFRESH_SECRET_TOKEN}
-        )
-        const result = {
-            "token": token,
-            "refreshToken": refreshToken,
-        }
 
-        return result;
-    }
-    
+
+
 }
